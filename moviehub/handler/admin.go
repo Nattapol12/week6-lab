@@ -14,24 +14,14 @@ import (
 )
 
 func (h *Handler) AdminStats(w http.ResponseWriter, r *http.Request) {
-	var movies, members, reviews int64
-
-	err := h.Store.Pool.QueryRow(r.Context(), `
-		SELECT
-			(SELECT COUNT(*) FROM movies),
-			(SELECT COUNT(*) FROM members),
-			(SELECT COUNT(*) FROM reviews)
-	`).Scan(&movies, &members, &reviews)
+	stats, err := h.Store.Stats(r.Context())
 	if err != nil {
 		internal(w, err)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
-		"movies": movies, "members": members, "reviews": reviews,
-	})
+	writeJSON(w, http.StatusOK, stats)
 }
-
 func (h *Handler) AdminMembers(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.Store.Pool.Query(r.Context(), `
 		SELECT id, email, display_name, role, created_at
