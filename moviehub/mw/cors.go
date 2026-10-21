@@ -1,6 +1,7 @@
 package mw
 
 import (
+	"log"
 	"net/http"
 	"strings"
 )
@@ -17,6 +18,13 @@ func CORS(allowed []string, next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
+
+		log.Printf(
+			"CORS check: origin=%q allowed=%v method=%s",
+			origin,
+			allowedOrigins[origin],
+			r.Method,
+		)
 
 		if allowedOrigins[origin] && origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
