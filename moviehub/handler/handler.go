@@ -78,3 +78,12 @@ func (h *Handler) GetMovie(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, m)
 }
+
+func (h *Handler) Genres(w http.ResponseWriter, r *http.Request) {
+	items, err := h.Store.Genres(r.Context())
+	if err != nil {
+		internal(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}

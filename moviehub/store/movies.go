@@ -26,7 +26,10 @@ func (s *Store) SearchMovies(ctx context.Context, q string) ([]Movie, error) {
                   WHERE mg.movie_id = m.id AND mg.position = 0),
                 extract(year FROM m.release_date)::int,
                 round(m.vote_average, 1)::float8,
-                'https://image.tmdb.org/t/p/w500' || m.poster_path
+                CASE
+    WHEN m.poster_path LIKE 'http%' THEN m.poster_path
+    ELSE 'https://image.tmdb.org/t/p/w500' || m.poster_path
+END
          FROM movies m
          WHERE lower(m.title) LIKE '%' || lower($1) || '%'
          ORDER BY m.popularity DESC`, q)
@@ -61,7 +64,10 @@ func (s *Store) GetMovie(ctx context.Context, id int64) (MovieDetail, error) {
                   WHERE mg.movie_id = m.id AND mg.position = 0),
                 extract(year FROM m.release_date)::int,
                 round(m.vote_average, 1)::float8,
-                'https://image.tmdb.org/t/p/w500' || m.poster_path,
+                CASE
+    WHEN m.poster_path LIKE 'http%' THEN m.poster_path
+    ELSE 'https://image.tmdb.org/t/p/w500' || m.poster_path
+END
                 coalesce(m.overview_th, m.overview)
          FROM movies m
          WHERE m.id = $1`, id).
@@ -70,4 +76,33 @@ func (s *Store) GetMovie(ctx context.Context, id int64) (MovieDetail, error) {
 		return m, ErrNotFound
 	}
 	return m, err
+}
+
+func (s *Store) Genres(ctx context.Context) ([]map[string]any, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT id, name_en, name_th
+		 FROM genres
+		 ORDER BY name_en`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []map[string]any{}
+	for rows.Next() {
+		var id int64
+		var nameEN string
+		var nameTH *string
+
+		if err := rows.Scan(&id, &nameEN, &nameTH); err != nil {
+			return nil, err
+		}
+
+		items = append(items, map[string]any{
+			"id":     id,
+			"name":   nameEN,
+			"nameTh": nameTH,
+		})
+	}
+	return items, rows.Err()
 }
